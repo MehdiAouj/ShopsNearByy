@@ -1,11 +1,18 @@
-﻿namespace ShopsNearByy.Models
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace ShopsNearByy.Models
 {
     public class UserModel
     {
-        public Guid Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public int Id { get; set; }
 
+        [BsonElement("email")]
         public string Email { get; set; }
 
+        [BsonElement("username")]
         public string Username { get; set; }
 
         public byte[] PasswordHash { get; set; }

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using ShopsNearByy.Models;
+using ShopsNearByy.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -15,24 +16,58 @@ namespace ShopsNearByy.Controllers
         public static UserModel user = new UserModel();
 
         private readonly IConfiguration _configuration;
+        private readonly IUserServices _userservices;
 
-        public Authentication(IConfiguration configuration)
+        public Authentication(IConfiguration configuration , IUserServices userservices)
         {
             _configuration = configuration;
+            _userservices = userservices;
         }
+
+
+        //get the user
+
+        [HttpGet("{id}")]
+        public ActionResult<UserModel> Get(int id)
+        {
+            var userExist = _userservices.Get(id);
+            return new EmptyResult();
+        }
+
+        //Registration
 
         [HttpPost("register")]
-        public async Task<ActionResult<UserModel>> Register(UserRegist request)
+        public async Task<ActionResult<UserModel>> Register(UserRegist request, UserModel user)
         {
-            CreatePassHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
+            
 
-            user.Email = request.Email;
-            user.Username = request.Username;
-            user.PasswordHash = passwordHash;
-            user.PasswordSalt = passwordSalt;
+            if (user == null || user.Email == request.Email)
 
-            return Ok(user);
+            {
+                return BadRequest("Check Your Email PLease!");
+            }
+
+            else
+            {
+                CreatePassHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
+
+                _userservices.Create(user);
+
+                return CreatedAtAction(nameof(Get), new { id = user.Id }, user);
+
+
+                user.Email = request.Email;
+                user.Username = request.Username;
+                user.PasswordHash = passwordHash;
+                user.PasswordSalt = passwordSalt;
+
+                return Ok(user);
+            }    
+
+            
         }
+
+        //Login
 
         [HttpPost("Login")]
 
@@ -53,6 +88,7 @@ namespace ShopsNearByy.Controllers
             string token = CreateToken(user);
             return Ok(token);
         }
+        //Jwt creation
 
         private string CreateToken(UserModel user)
         {
@@ -76,6 +112,8 @@ namespace ShopsNearByy.Controllers
             return jwt;
         }
 
+        //Password Hashing
+
         private void CreatePassHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using (var hmac = new HMACSHA512())
@@ -85,6 +123,8 @@ namespace ShopsNearByy.Controllers
 
             }
         }
+
+        //Password Hashing Verification
 
         private bool VerifyPassHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
